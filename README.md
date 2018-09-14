@@ -41,7 +41,8 @@ paramValidator := validator.New(
 ```
 
 #### Add rules later
-```
+
+```go
 import "validator"
 
 ...
@@ -68,7 +69,7 @@ queryValidator.AddRule("page_size", func(v interface{}) (validator.FuncResponse,
 
 As you may have seen above, you can also pass in custom functions as long as they match this signature:
 
-```
+```go
 func(v interface{}) (validator.FuncResponse, error)
 ```
 
@@ -76,7 +77,7 @@ func(v interface{}) (validator.FuncResponse, error)
 
 To validate your values, call the `.Validate` function (attached to the `validator` object with an argument of type `map[string]interface{}`:
 
-```
+```go
 vr, err := paramValidator.Validate(map[string]interface{}{
 	"page_size": "53",
 })
@@ -86,7 +87,7 @@ This will return a `validator.Response` and an `error`. `validator.Response` con
 
 Here's an example of how you might use the response from above:
 
-```
+```go
 if err != nil {
 	log.Println("Uh oh, unexpected error: ", err.Error())
 	// return a 500 http response, exit program, or however you'd like to handle this
@@ -101,7 +102,7 @@ if !vr.IsValid {
 
 You can tell the validator to process your properties in parallel:
 
-```
+```go
 v := validator.New(
 	validator.Rule{
 		Key: "video",
