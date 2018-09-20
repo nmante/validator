@@ -5,6 +5,16 @@ import (
 	"strconv"
 )
 
+// Func is function type that all validator functions must follow
+type Func func(interface{}) (FuncResponse, error)
+
+// FuncResponse contains info around if a validator function was valid. If it isn't valid, an
+// error message is also returned
+type FuncResponse struct {
+	IsValid bool
+	Error   string
+}
+
 // IsStringBetweenInts checks if a string value is between integers
 func IsStringBetweenInts(lower int, upper int) Func {
 	return func(v interface{}) (FuncResponse, error) {
