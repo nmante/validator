@@ -17,7 +17,9 @@ You can either initialize a validator with a set of `Rule`s, or create an empty 
 #### Initialize with rules
 
 ```go
-import "validator"
+import (
+	"github.com/nmante/validator"
+)
 
 ...
 
@@ -43,7 +45,9 @@ paramValidator := validator.New(
 #### Add rules later
 
 ```go
-import "validator"
+import (
+	"github.com/nmante/validator"
+)
 
 ...
 
@@ -127,7 +131,9 @@ vr, err := v.Validate(values)
 You can also tell each `Rule` to process it's `Func`s in parallel
 
 ```go
-import "validator"
+import (
+	"github.com/nmante/validator"
+)
 
 ...
 
