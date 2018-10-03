@@ -1,18 +1,17 @@
-package main
+package validator
 
 import (
 	"errors"
 	"sync"
 )
 
+var (
+	ErrMustBeFuncJob = errors.New("Job must be of type FuncJob")
+	ErrMustBeRuleJob = errors.New("Job must be of type RuleJob")
+)
+
 type Job interface {
 	Run(wg *sync.WaitGroup)
-}
-
-type Result struct {
-	isValid          bool
-	validationErrors []string
-	err              error
 }
 
 type FuncJob struct {
@@ -43,8 +42,37 @@ func NewFuncJob(value interface{}, validatorFunc Func, options ...func(*FuncJob)
 }
 
 func (j *FuncJob) Run(wg *sync.WaitGroup) {
-	fr, err := j.validatorFunc(j.value)
+	response, err := j.validatorFunc(j.value)
 	j.Err = err
-	j.Result = fr
+	j.Result = response
+	wg.Done()
+}
+
+type RuleJob struct {
+	value  interface{}
+	rule   Rule
+	Err    error
+	Result RuleResponse
+}
+
+func NewRuleJob(value interface{}, rule Rule, options ...func(*RuleJob) error) (*RuleJob, error) {
+	ruleJob := &RuleJob{
+		value: value,
+		rule:  rule,
+	}
+
+	for _, option := range options {
+		err := option(ruleJob)
+		if err != nil {
+			return &RuleJob{}, err
+		}
+	}
+
+	return ruleJob, nil
+}
+
+func (j *RuleJob) Run(wg *sync.WaitGroup) {
+	response := j.rule.execute(j.value)
+	j.Result = response
 	wg.Done()
 }

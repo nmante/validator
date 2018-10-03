@@ -1,60 +1,78 @@
-package main
+package validator
 
 import (
+	"errors"
 	"sync"
 )
 
 const (
-	MinWorkers = 1
+	MinWorkers = 2
 	MaxWorkers = 20000
 )
 
-type WorkerPool interface {
+var (
+	ErrInvalidJobSlice = errors.New("Must pass in slice of Job interfaces.")
+)
+
+type Pool interface {
 	Run()
 	Work()
 }
 
-type FuncWorkerPool struct {
-	jobs       []*FuncJob
-	jobsChan   chan *FuncJob
+type WorkerPool struct {
+	jobs       []Job
+	jobsChan   chan Job
 	waitGroup  sync.WaitGroup
 	numWorkers int
 }
 
-func NewFuncWorkerPool(numWorkers int, jobs []*FuncJob, options ...func(*FuncWorkerPool)) *FuncWorkerPool {
-	n := numWorkers
-	if numWorkers < MinWorkers {
-		n = MinWorkers
-	} else if numWorkers > MaxWorkers {
-		n = MaxWorkers
+func NewWorkerPool(numWorkers int, jobs interface{}, options ...func(*WorkerPool) error) (*WorkerPool, error) {
+	js, ok := jobs.([]Job)
+	if !ok {
+		return nil, ErrInvalidJobSlice
 	}
 
-	pool := &FuncWorkerPool{
-		numWorkers: n,
-		jobs:       jobs,
-		jobsChan:   make(chan *FuncJob),
+	pool := &WorkerPool{
+		jobs:     js,
+		jobsChan: make(chan Job),
 	}
+
+	pool.setNumWorkers(numWorkers)
 
 	for _, option := range options {
-		option(pool)
+		err := option(pool)
+
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return pool
+	return pool, nil
 }
 
-func (p *FuncWorkerPool) work() {
+func (p *WorkerPool) setNumWorkers(n int) {
+	if n < MinWorkers {
+		p.numWorkers = MinWorkers
+	} else if n > MaxWorkers {
+		p.numWorkers = MaxWorkers
+	}
+
+	p.numWorkers = n
+}
+
+func (p *WorkerPool) Work() {
 	for job := range p.jobsChan {
 		job.Run(&p.waitGroup)
 	}
 }
 
-func (p *FuncWorkerPool) AddJob(job *FuncJob) {
-	p.jobs = append(p.jobs, job)
+func (p *WorkerPool) AddJobs(jobs ...Job) {
+	p.jobs = append(p.jobs, jobs...)
 }
 
-func (p *FuncWorkerPool) Run() {
+func (p *WorkerPool) Run() {
 	for i := 0; i < p.numWorkers; i++ {
-		go p.work()
+		go p.Work()
 	}
 
 	p.waitGroup.Add(len(p.jobs))

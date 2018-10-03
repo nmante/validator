@@ -1,4 +1,4 @@
-package main
+package validator
 
 // Rule is a custom object that contains a key and validator functions
 type Rule struct {
@@ -18,12 +18,8 @@ type RuleResponse struct {
 	Err              error
 }
 
-func (r Rule) routine(value interface{}, responses chan<- RuleResponse) {
-	responses <- r.execute(value)
-}
-
-func (r Rule) createJobs(value interface{}) ([]*FuncJob, error) {
-	jobs := []*FuncJob{}
+func (r Rule) createJobs(value interface{}) ([]Job, error) {
+	jobs := []Job{}
 	for _, f := range r.Funcs {
 		job, err := NewFuncJob(value, f)
 		if err != nil {
@@ -40,39 +36,51 @@ func (r Rule) execute(value interface{}) RuleResponse {
 	errors := []string{}
 	isValid := true
 
+	jobs, err := r.createJobs(value)
+	if err != nil {
+		return RuleResponse{
+			Err: err,
+		}
+	}
+
 	if r.EnableParallel {
-		jobs, err := r.createJobs(value)
+		pool, err := NewWorkerPool(len(jobs), jobs)
 		if err != nil {
 			return RuleResponse{
+				Key: r.Key,
 				Err: err,
 			}
 		}
-
-		pool := NewFuncWorkerPool(len(jobs), jobs)
 		pool.Run()
+	}
 
-		for _, j := range jobs {
-			if j.Err != nil {
-				return RuleResponse{
-					Key: r.Key,
-					Err: j.Err,
-				}
+	for _, job := range jobs {
+		j, ok := job.(*FuncJob)
+		if !ok {
+			return RuleResponse{
+				Key: r.Key,
+				Err: ErrMustBeFuncJob,
 			}
-
-			errors = append(errors, j.Result.Error)
-			isValid = j.Result.IsValid
 		}
-	} else {
-		for _, validatorFunc := range r.Funcs {
-			response, err := validatorFunc(value)
 
+		if !r.EnableParallel {
+			response, err := j.validatorFunc(value)
 			if err != nil {
-				return RuleResponse{Err: err}
+				j.Err = err
+			} else {
+				j.Result = response
 			}
-
-			errors = append(errors, response.Error)
-			isValid = response.IsValid
 		}
+
+		if j.Err != nil {
+			return RuleResponse{
+				Key: r.Key,
+				Err: j.Err,
+			}
+		}
+
+		errors = append(errors, j.Result.Error)
+		isValid = isValid && j.Result.IsValid
 	}
 
 	return RuleResponse{

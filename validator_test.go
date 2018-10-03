@@ -1,4 +1,4 @@
-package main
+package validator
 
 import (
 	"reflect"
@@ -46,7 +46,7 @@ func TestValidate(t *testing.T) {
 	})
 
 	if len(response.Errors) != 1 {
-		t.Errorf("There should be 1 error")
+		t.Errorf("There should be 1 error, %+v", response)
 	}
 }
 
@@ -85,10 +85,24 @@ func TestAddRule(t *testing.T) {
 		}
 
 		return FuncResponse{true, ""}, nil
+	}).AddRule("must_be_odd", func(v interface{}) (FuncResponse, error) {
+		val, ok := v.(int)
+		if !ok {
+			return FuncResponse{}, ErrTypeMismatch{v, "int"}
+		}
+
+		if val%2 == 0 {
+			return FuncResponse{false, "must be an odd integer"}, nil
+		}
+
+		return FuncResponse{true, ""}, nil
 	})
 
 	if n := len(validator.Rules()); n != 1 {
-		t.Errorf("There are %d rules. There should be 1 rule.", n)
+		t.Errorf("There are %d rules. There should be 1.", n)
+	}
+	if n := len(validator.Rules()["must_be_odd"].Funcs); n != 2 {
+		t.Errorf("There are %d funcs. There should be 2.", n)
 	}
 }
 
@@ -213,7 +227,6 @@ func TestParallelPropertyValidation(t *testing.T) {
 			},
 		},
 	)
-
 	validator.EnableParallel = true
 
 	video := Asset{

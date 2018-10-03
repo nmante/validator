@@ -1,4 +1,4 @@
-package main
+package validator
 
 // Validator is an object that contains a set of rules that can be validated in parallel, or synchronously
 type Validator struct {
@@ -24,6 +24,7 @@ func New(rules ...Rule) Validator {
 
 		r := rs[rule.Key]
 		r.Funcs = append(r.Funcs, rule.Funcs...)
+		rs[rule.Key] = r
 	}
 
 	return Validator{
@@ -32,16 +33,18 @@ func New(rules ...Rule) Validator {
 }
 
 // AddRule adds a rule to the validator
-func (v Validator) AddRule(key string, funcs ...Func) {
+func (v Validator) AddRule(key string, funcs ...Func) Validator {
 	if rule, ok := v.rules[key]; ok {
 		rule.Funcs = append(rule.Funcs, funcs...)
-		return
+		v.rules[key] = rule
+		return v
 	}
 
 	v.rules[key] = Rule{Key: key, Funcs: funcs}
+	return v
 }
 
-// Rules returns the list of rules for this validator object
+// Rules returns the map of rules for this validator object
 func (v Validator) Rules() map[string]Rule {
 	return v.rules
 }
@@ -50,48 +53,51 @@ func (v Validator) Rules() map[string]Rule {
 func (v Validator) Validate(values map[string]interface{}) (Response, error) {
 	errors := map[string][]string{}
 	isValid := true
+	jobs := []Job{}
 
 	for key, rule := range v.Rules() {
+		if value, ok := values[key]; ok {
+			rj, err := NewRuleJob(value, rule)
+			if err != nil {
+				return Response{}, err
+			}
+
+			jobs = append(jobs, rj)
+		}
+
 		if _, ok := values[key]; rule.IsRequired && !ok {
 			errors[key] = []string{"is required"}
 			isValid = false
 		}
 	}
 
-	if !v.EnableParallel {
-		for k, val := range values {
-			if rule, ok := v.rules[k]; ok {
-				cResponse := rule.execute(val)
-				if cResponse.Err != nil {
-					return Response{}, cResponse.Err
-				}
-
-				if !cResponse.IsValid {
-					errors[cResponse.Key] = append(errors[cResponse.Key], cResponse.ValidationErrors...)
-					isValid = false
-				}
-			}
+	if v.EnableParallel {
+		pool, err := NewWorkerPool(len(values), jobs)
+		if err != nil {
+			return Response{}, err
 		}
-	} else {
-		numValues := len(values)
-		parallelResponses := make(chan RuleResponse, numValues)
+		pool.Run()
+	}
 
-		for k, val := range values {
-			if rule, ok := v.rules[k]; ok {
-				go rule.routine(val, parallelResponses)
-			}
+	for _, job := range jobs {
+		j, ok := job.(*RuleJob)
+		if !ok {
+			return Response{}, ErrMustBeRuleJob
 		}
 
-		for i := 0; i < numValues; i++ {
-			cResponse := <-parallelResponses
-			if cResponse.Err != nil {
-				return Response{}, cResponse.Err
-			}
+		if !v.EnableParallel {
+			response := j.rule.execute(j.value)
+			j.Err = response.Err
+			j.Result = response
+		}
 
-			if !cResponse.IsValid {
-				errors[cResponse.Key] = append(errors[cResponse.Key], cResponse.ValidationErrors...)
-				isValid = false
-			}
+		if j.Err != nil {
+			return Response{}, j.Err
+		}
+
+		if !j.Result.IsValid {
+			errors[j.rule.Key] = append(errors[j.rule.Key], j.Result.ValidationErrors...)
+			isValid = false
 		}
 	}
 
