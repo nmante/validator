@@ -72,7 +72,8 @@ func NewRuleJob(value interface{}, rule Rule, options ...func(*RuleJob) error) (
 }
 
 func (j *RuleJob) Run(wg *sync.WaitGroup) {
-	response := j.rule.execute(j.value)
+	response, err := j.rule.execute(j.value)
 	j.Result = response
+	j.Err = err
 	wg.Done()
 }

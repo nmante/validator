@@ -7,7 +7,7 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	validator := New()
+	validator, _ := New(nil)
 	if len(validator.Rules()) != 0 {
 		t.Error("There should be 0 rules")
 	}
@@ -18,7 +18,7 @@ func TestNew(t *testing.T) {
 		}
 		return FuncResponse{true, ""}, nil
 	}
-	v2 := New(Rule{Key: "random", Funcs: []Func{mustBeOne}})
+	v2, _ := New([]Rule{Rule{Key: "random", Funcs: []Func{mustBeOne}}})
 
 	if len(v2.Rules()) != 1 {
 		t.Error("There should be 1 rules")
@@ -27,7 +27,8 @@ func TestNew(t *testing.T) {
 }
 
 func TestValidate(t *testing.T) {
-	validator := New()
+	validator, _ := New(nil)
+	validator.AddRule("must_be_even", IsInt)
 	validator.AddRule("must_be_even", func(v interface{}) (FuncResponse, error) {
 		val, ok := v.(int)
 		if !ok {
@@ -41,8 +42,13 @@ func TestValidate(t *testing.T) {
 		return FuncResponse{true, ""}, nil
 	})
 
+	validator.AddRule("page_size", IsStringInt)
+	validator.AddRule("num", IsTransformableToInt(StringToInt{}))
+
 	response, _ := validator.Validate(map[string]interface{}{
 		"must_be_even": 3,
+		"page_size":    "100",
+		"num":          "54",
 	})
 
 	if len(response.Errors) != 1 {
@@ -56,7 +62,7 @@ func TestRules(t *testing.T) {
 		Rule{Key: "world", Funcs: []Func{}},
 	}
 
-	v := New(rules...)
+	v, _ := New(rules)
 
 	if len(rules) != len(v.Rules()) {
 		t.Errorf("There should be %d rules", len(rules))
@@ -73,7 +79,7 @@ func TestRules(t *testing.T) {
 }
 
 func TestAddRule(t *testing.T) {
-	validator := New()
+	validator, _ := New(nil)
 	validator.AddRule("must_be_odd", func(v interface{}) (FuncResponse, error) {
 		val, ok := v.(int)
 		if !ok {
@@ -106,89 +112,6 @@ func TestAddRule(t *testing.T) {
 	}
 }
 
-func TestIsStringInt(t *testing.T) {
-	validator := New(
-		Rule{
-			Key: "page_size",
-			Funcs: []Func{
-				IsStringInt,
-			},
-		},
-		Rule{
-			Key: "username",
-			Funcs: []Func{
-				IsStringInt,
-			},
-		},
-	)
-
-	r, err := validator.Validate(map[string]interface{}{
-		"page_size": "53",
-		"username":  "abc",
-	})
-
-	if err != nil {
-		t.Errorf(err.Error())
-	}
-
-	if len(r.Errors) != 1 {
-		t.Error("'username' value is not a string. There should be one validation error message")
-	}
-}
-
-func TestIsStringBetweenInts(t *testing.T) {
-	validator := New(
-		Rule{
-			Key: "page_size",
-			Funcs: []Func{
-				IsStringBetweenInts(10, 100),
-			},
-		},
-		Rule{
-			Key: "rando",
-			Funcs: []Func{
-				IsStringBetweenInts(1, 10),
-			},
-		},
-	)
-
-	r, err := validator.Validate(map[string]interface{}{
-		"page_size": "53",
-		"rando":     "5",
-	})
-
-	if err != nil {
-		t.Errorf(err.Error())
-	}
-
-	if !r.IsValid {
-		t.Error(r.Errors)
-	}
-}
-
-func TestIsStringEqualToInt(t *testing.T) {
-	validator := New(
-		Rule{
-			Key: "page_size",
-			Funcs: []Func{
-				IsStringEqualToInt(53),
-			},
-		},
-	)
-
-	r, err := validator.Validate(map[string]interface{}{
-		"page_size": "54",
-	})
-
-	if err != nil {
-		t.Error(err)
-	}
-
-	if r.IsValid {
-		t.Error("IsStringEqualToInt requires matching values")
-	}
-}
-
 // TestParallelPropertyValidation simulates long blocking calls. It should at the most take ~numSecondsBlock
 // to complete
 func TestParallelPropertyValidation(t *testing.T) {
@@ -211,23 +134,31 @@ func TestParallelPropertyValidation(t *testing.T) {
 	}
 
 	// Call the isVideoExists function twice just to show both funcs process in parallel
-	validator := New(
-		Rule{
-			Key:            "video",
-			EnableParallel: true,
-			Funcs: []Func{
-				isVideoExists,
-				isVideoExists,
+	validator, _ := New(
+		[]Rule{
+			Rule{
+				Key:            "video",
+				EnableParallel: true,
+				Funcs: []Func{
+					isVideoExists,
+					isVideoExists,
+				},
+			},
+			Rule{
+				Key: "image",
+				Funcs: []Func{
+					isImageExists,
+				},
+			},
+			Rule{
+				Key: "page_size",
+				Funcs: []Func{
+					IsEqual(StringToInt{}, IntComparer{}, 100),
+				},
 			},
 		},
-		Rule{
-			Key: "image",
-			Funcs: []Func{
-				isImageExists,
-			},
-		},
+		ParallelOption(true),
 	)
-	validator.EnableParallel = true
 
 	video := Asset{
 		ID:  1,
@@ -241,8 +172,9 @@ func TestParallelPropertyValidation(t *testing.T) {
 
 	startTime := time.Now()
 	r, err := validator.Validate(map[string]interface{}{
-		"video": video,
-		"image": image,
+		"video":     video,
+		"image":     image,
+		"page_size": "100",
 	})
 
 	timeDuration := time.Since(startTime)

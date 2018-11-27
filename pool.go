@@ -19,20 +19,20 @@ type Pool interface {
 	Work()
 }
 
-type WorkerPool struct {
+type workerPool struct {
 	jobs       []Job
 	jobsChan   chan Job
 	waitGroup  sync.WaitGroup
 	numWorkers int
 }
 
-func NewWorkerPool(numWorkers int, jobs interface{}, options ...func(*WorkerPool) error) (*WorkerPool, error) {
+func NewWorkerPool(numWorkers int, jobs interface{}, options ...func(*workerPool) error) (*workerPool, error) {
 	js, ok := jobs.([]Job)
 	if !ok {
 		return nil, ErrInvalidJobSlice
 	}
 
-	pool := &WorkerPool{
+	pool := &workerPool{
 		jobs:     js,
 		jobsChan: make(chan Job),
 	}
@@ -50,7 +50,7 @@ func NewWorkerPool(numWorkers int, jobs interface{}, options ...func(*WorkerPool
 	return pool, nil
 }
 
-func (p *WorkerPool) setNumWorkers(n int) {
+func (p *workerPool) setNumWorkers(n int) {
 	if n < MinWorkers {
 		p.numWorkers = MinWorkers
 	} else if n > MaxWorkers {
@@ -60,17 +60,18 @@ func (p *WorkerPool) setNumWorkers(n int) {
 	p.numWorkers = n
 }
 
-func (p *WorkerPool) Work() {
+func (p *workerPool) Work() {
 	for job := range p.jobsChan {
 		job.Run(&p.waitGroup)
 	}
 }
 
-func (p *WorkerPool) AddJobs(jobs ...Job) {
+func (p *workerPool) AddJobs(jobs ...Job) {
 	p.jobs = append(p.jobs, jobs...)
 }
 
-func (p *WorkerPool) Run() {
+func (p *workerPool) Run() {
+	defer close(p.jobsChan)
 	for i := 0; i < p.numWorkers; i++ {
 		go p.Work()
 	}
@@ -81,6 +82,5 @@ func (p *WorkerPool) Run() {
 		p.jobsChan <- job
 	}
 
-	close(p.jobsChan)
 	p.waitGroup.Wait()
 }

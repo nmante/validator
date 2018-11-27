@@ -15,10 +15,9 @@ type RuleResponse struct {
 	Key              string
 	IsValid          bool
 	ValidationErrors []string
-	Err              error
 }
 
-func (r Rule) createJobs(value interface{}) ([]Job, error) {
+func (r Rule) createFuncJobs(value interface{}) ([]Job, error) {
 	jobs := []Job{}
 	for _, f := range r.Funcs {
 		job, err := NewFuncJob(value, f)
@@ -32,24 +31,19 @@ func (r Rule) createJobs(value interface{}) ([]Job, error) {
 	return jobs, nil
 }
 
-func (r Rule) execute(value interface{}) RuleResponse {
+func (r Rule) execute(value interface{}) (RuleResponse, error) {
 	errors := []string{}
 	isValid := true
 
-	jobs, err := r.createJobs(value)
+	jobs, err := r.createFuncJobs(value)
 	if err != nil {
-		return RuleResponse{
-			Err: err,
-		}
+		return RuleResponse{}, err
 	}
 
 	if r.EnableParallel {
 		pool, err := NewWorkerPool(len(jobs), jobs)
 		if err != nil {
-			return RuleResponse{
-				Key: r.Key,
-				Err: err,
-			}
+			return RuleResponse{}, err
 		}
 		pool.Run()
 	}
@@ -57,26 +51,17 @@ func (r Rule) execute(value interface{}) RuleResponse {
 	for _, job := range jobs {
 		j, ok := job.(*FuncJob)
 		if !ok {
-			return RuleResponse{
-				Key: r.Key,
-				Err: ErrMustBeFuncJob,
-			}
+			return RuleResponse{}, ErrMustBeFuncJob
 		}
 
 		if !r.EnableParallel {
 			response, err := j.validatorFunc(value)
-			if err != nil {
-				j.Err = err
-			} else {
-				j.Result = response
-			}
+			j.Err = err
+			j.Result = response
 		}
 
 		if j.Err != nil {
-			return RuleResponse{
-				Key: r.Key,
-				Err: j.Err,
-			}
+			return RuleResponse{}, j.Err
 		}
 
 		errors = append(errors, j.Result.Error)
@@ -87,6 +72,5 @@ func (r Rule) execute(value interface{}) RuleResponse {
 		Key:              r.Key,
 		ValidationErrors: errors,
 		IsValid:          isValid,
-		Err:              nil,
-	}
+	}, nil
 }

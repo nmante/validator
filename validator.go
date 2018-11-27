@@ -2,7 +2,7 @@ package validator
 
 // Validator is an object that contains a set of rules that can be validated in parallel, or synchronously
 type Validator struct {
-	EnableParallel bool
+	enableParallel bool
 	rules          map[string]Rule
 }
 
@@ -13,7 +13,7 @@ type Response struct {
 }
 
 // New returns a validator object
-func New(rules ...Rule) Validator {
+func New(rules []Rule, options ...Option) (*Validator, error) {
 	rs := map[string]Rule{}
 
 	for _, rule := range rules {
@@ -27,13 +27,24 @@ func New(rules ...Rule) Validator {
 		rs[rule.Key] = r
 	}
 
-	return Validator{
-		rules: rs,
+	v := &Validator{
+		enableParallel: false,
+		rules:          rs,
 	}
+
+	for _, option := range options {
+		err := option(v)
+
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return v, nil
 }
 
 // AddRule adds a rule to the validator
-func (v Validator) AddRule(key string, funcs ...Func) Validator {
+func (v *Validator) AddRule(key string, funcs ...Func) *Validator {
 	if rule, ok := v.rules[key]; ok {
 		rule.Funcs = append(rule.Funcs, funcs...)
 		v.rules[key] = rule
@@ -45,12 +56,12 @@ func (v Validator) AddRule(key string, funcs ...Func) Validator {
 }
 
 // Rules returns the map of rules for this validator object
-func (v Validator) Rules() map[string]Rule {
+func (v *Validator) Rules() map[string]Rule {
 	return v.rules
 }
 
 // Validate runs all the rules of validation
-func (v Validator) Validate(values map[string]interface{}) (Response, error) {
+func (v *Validator) Validate(values map[string]interface{}) (Response, error) {
 	errors := map[string][]string{}
 	isValid := true
 	jobs := []Job{}
@@ -71,7 +82,7 @@ func (v Validator) Validate(values map[string]interface{}) (Response, error) {
 		}
 	}
 
-	if v.EnableParallel {
+	if v.enableParallel {
 		pool, err := NewWorkerPool(len(values), jobs)
 		if err != nil {
 			return Response{}, err
@@ -85,9 +96,9 @@ func (v Validator) Validate(values map[string]interface{}) (Response, error) {
 			return Response{}, ErrMustBeRuleJob
 		}
 
-		if !v.EnableParallel {
-			response := j.rule.execute(j.value)
-			j.Err = response.Err
+		if !v.enableParallel {
+			response, err := j.rule.execute(j.value)
+			j.Err = err
 			j.Result = response
 		}
 
