@@ -10,7 +10,7 @@ var (
 
 type Option func(*Validator) error
 
-func ParallelOption(isParallel bool) Option {
+func OptionParallel(isParallel bool) Option {
 	return func(v *Validator) error {
 		if v == nil {
 			return ErrNilValidator

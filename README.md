@@ -23,7 +23,7 @@ import (
 
 ...
 
-paramValidator := validator.New(
+rules := []Rule{
 	validator.Rule{
 		Key: "page_size",
 		IsRequired: true, // default is false
@@ -39,7 +39,8 @@ paramValidator := validator.New(
 			},
 		},
 	},
-)
+}
+paramValidator := validator.New(rules)
 ```
 
 #### Add rules later
@@ -51,7 +52,7 @@ import (
 
 ...
 
-queryValidator := validator.New()
+queryValidator := validator.New(nil) // either an empty `Rules` array or nil
 
 ...
 
@@ -77,6 +78,26 @@ As you may have seen above, you can also pass in custom functions as long as the
 func(v interface{}) (validator.FuncResponse, error)
 ```
 
+### Configuring your validator
+
+You can configure your validator with functional options. The functions must be of type `validator.Option` which is:
+```go
+func(*Validator) error
+```
+
+```go
+
+v := validator.New(
+	nil,
+	validator.OptionParallel(true), // process each rule in parallel
+	myCustomOptionFunction(aValue),
+)
+
+...
+
+vr, err := v.Validate(values)
+```
+
 ### Validating your actual values
 
 To validate your values, call the `.Validate` function (attached to the `validator` object with an argument of type `map[string]interface{}`:
@@ -96,6 +117,7 @@ if err != nil {
 	log.Println("Uh oh, unexpected error: ", err.Error())
 	// return a 500 http response, exit program, or however you'd like to handle this
 }
+
 if !vr.IsValid {
 	log.Println("Validation failed: ", vr.Errors)
 	// return a 400 response, exit program, or however you'd like to handle this
@@ -107,7 +129,7 @@ if !vr.IsValid {
 You can tell the validator to process your properties in parallel:
 
 ```go
-v := validator.New(
+rules := []Rule{
 	validator.Rule{
 		Key: "video",
 		Funcs: []validator.Func{
@@ -120,8 +142,12 @@ v := validator.New(
 			aLongBlockingImageValidationFunc,
 		},
 	},
+}
+
+v := validator.New(
+	rules,
+	validator.OptionParallel(true), // process each rule in parallel
 )
-v.EnableParallel = true // process each rule in parallel
 
 ...
 
@@ -137,7 +163,7 @@ import (
 
 ...
 
-paramValidator := validator.New(
+rules := []Rule{
 	validator.Rule{
 		Key: "video",
 		IsRequired: false,
@@ -147,5 +173,7 @@ paramValidator := validator.New(
 			anotherLongBlockingValidationFunc
 		},
 	},
-)
+}
+
+paramValidator := validator.New(rules)
 ```

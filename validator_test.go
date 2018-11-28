@@ -157,7 +157,7 @@ func TestParallelPropertyValidation(t *testing.T) {
 				},
 			},
 		},
-		ParallelOption(true),
+		OptionParallel(true),
 	)
 
 	video := Asset{
