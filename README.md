@@ -8,7 +8,7 @@
 
 In a nutshell, you can first configure the validator with a list of M properties to validate. Each property can N validation `Func`s associated with it. Properties can be processed in parallel, AND the validation `Func`s associated with a property can also be processed in parallel.
 
-The following sections gives a brief overview of how to use the validator.
+The following sections give a brief overview of how to use the validator.
 
 ### Initializing
 
