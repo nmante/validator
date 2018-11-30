@@ -1,0 +1,26 @@
+package validator
+
+import (
+	"testing"
+)
+
+func TestSetNumWorkers(t *testing.T) {
+	numWorkers := 20
+	p, _ := NewWorkerPool(numWorkers, []Job{})
+
+	if p.numWorkers != numWorkers {
+		t.Errorf("Num workers should be %d", numWorkers)
+	}
+
+	p.setNumWorkers(100000000)
+
+	if p.numWorkers != MaxWorkers {
+		t.Errorf("Num workers should be %d", MaxWorkers)
+	}
+
+	p.setNumWorkers(-1)
+
+	if p.numWorkers != MinWorkers {
+		t.Errorf("Num workers should be %d", MinWorkers)
+	}
+}

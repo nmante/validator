@@ -55,9 +55,9 @@ func (p *workerPool) setNumWorkers(n int) {
 		p.numWorkers = MinWorkers
 	} else if n > MaxWorkers {
 		p.numWorkers = MaxWorkers
+	} else {
+		p.numWorkers = n
 	}
-
-	p.numWorkers = n
 }
 
 func (p *workerPool) Work() {
