@@ -6,6 +6,8 @@ import (
 	"reflect"
 	"regexp"
 
+	"github.com/nmante/validator/compare"
+	"github.com/nmante/validator/transform"
 	"github.com/nmante/validator/types"
 )
 
@@ -30,13 +32,8 @@ type FuncResponse struct {
 	Error   string
 }
 
-// IsTranformableToInt checks if a value is transformable to an int
-func IsTransformableToInt(transformer Transformer) Func {
-	return IsTransformableTo(transformer, types.Int)
-}
-
 // IsTransformableTo checks if a value of type 'A' is transformable to type 'B'
-func IsTransformableTo(transformer Transformer, _type reflect.Type) Func {
+func IsTransformableTo(transformer transform.Interface, _type reflect.Type) Func {
 	return func(v interface{}) (FuncResponse, error) {
 		t, err := transformer.Transform(v)
 		if err != nil {
@@ -55,7 +52,7 @@ func IsTransformableTo(transformer Transformer, _type reflect.Type) Func {
 }
 
 // IsEqual transforms a 'v' to a type, and checks if it's equal to 'right'
-func IsEqual(transformer Transformer, comparer Comparer, right interface{}) Func {
+func IsEqual(transformer transform.Interface, comparer compare.Interface, right interface{}) Func {
 	return func(v interface{}) (FuncResponse, error) {
 		value, err := transformer.Transform(v)
 		if err != nil {
@@ -75,7 +72,7 @@ func IsEqual(transformer Transformer, comparer Comparer, right interface{}) Func
 }
 
 // IsBetween checks if a value is between a lower and an upper value
-func IsBetween(transformer Transformer, comparer Comparer, lower interface{}, upper interface{}) Func {
+func IsBetween(transformer transform.Interface, comparer compare.Interface, lower interface{}, upper interface{}) Func {
 	return func(v interface{}) (FuncResponse, error) {
 		value, err := transformer.Transform(v)
 		if err != nil {

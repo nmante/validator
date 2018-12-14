@@ -1,6 +1,11 @@
 package validator
 
 import (
+	"github.com/nmante/validator/compare"
+	"github.com/nmante/validator/transform"
+	"github.com/nmante/validator/types"
+
+	"errors"
 	"reflect"
 	"testing"
 	"time"
@@ -18,6 +23,7 @@ func TestNew(t *testing.T) {
 		}
 		return FuncResponse{true, ""}, nil
 	}
+
 	v2, _ := New([]Rule{Rule{Key: "random", Funcs: []Func{mustBeOne}}})
 
 	if len(v2.Rules()) != 1 {
@@ -32,7 +38,7 @@ func TestValidate(t *testing.T) {
 	validator.AddRule("must_be_even", func(v interface{}) (FuncResponse, error) {
 		val, ok := v.(int)
 		if !ok {
-			return FuncResponse{}, ErrTypeMismatch{v, "int"}
+			return FuncResponse{}, errors.New("Not an integer")
 		}
 
 		if val%2 != 0 {
@@ -43,7 +49,7 @@ func TestValidate(t *testing.T) {
 	})
 
 	validator.AddRule("page_size", IsStringInt)
-	validator.AddRule("num", IsTransformableToInt(StringToInt{}))
+	validator.AddRule("num", IsTransformableTo(transform.StringToInt, types.Int))
 
 	response, _ := validator.Validate(map[string]interface{}{
 		"must_be_even": 3,
@@ -83,7 +89,7 @@ func TestAddRule(t *testing.T) {
 	validator.AddRule("must_be_odd", func(v interface{}) (FuncResponse, error) {
 		val, ok := v.(int)
 		if !ok {
-			return FuncResponse{}, ErrTypeMismatch{v, "int"}
+			return FuncResponse{}, errors.New("not an integer")
 		}
 
 		if val%2 == 0 {
@@ -94,7 +100,7 @@ func TestAddRule(t *testing.T) {
 	}).AddRule("must_be_odd", func(v interface{}) (FuncResponse, error) {
 		val, ok := v.(int)
 		if !ok {
-			return FuncResponse{}, ErrTypeMismatch{v, "int"}
+			return FuncResponse{}, errors.New("not an integer")
 		}
 
 		if val%2 == 0 {
@@ -153,7 +159,7 @@ func TestParallelPropertyValidation(t *testing.T) {
 			Rule{
 				Key: "page_size",
 				Funcs: []Func{
-					IsEqual(StringToInt{}, IntComparer{}, 100),
+					IsEqual(transform.StringToInt, compare.Int, 100),
 				},
 			},
 		},

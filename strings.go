@@ -1,37 +1,42 @@
 package validator
 
 import (
-	"strconv"
+	"github.com/nmante/validator/compare"
+	"github.com/nmante/validator/transform"
+	"github.com/nmante/validator/types"
 )
-
-type StringToInt struct{}
-
-// Transform converts a string to an integer
-func (s StringToInt) Transform(v interface{}) (interface{}, error) {
-	val, ok := v.(string)
-	if !ok {
-		return 0, ErrTypeMismatch{v, "string"}
-	}
-
-	num, err := strconv.Atoi(val)
-	if err != nil {
-		return 0, err
-	}
-
-	return num, nil
-}
 
 // IsStringInRangeInts checks if a string value is between integers
 func IsStringInRangeInts(lower int, upper int) Func {
-	return IsBetween(StringToInt{}, IntComparer{}, lower, upper)
+	return IsBetween(transform.StringToInt, compare.Int, lower, upper)
 }
 
 // IsStringEqualToInt checks if the value within a string is equal to an integer
 func IsStringEqualToInt(right int) Func {
-	return IsEqual(StringToInt{}, IntComparer{}, right)
+	return IsEqual(transform.StringToInt, compare.Int, right)
 }
 
 // IsStringInt checks if the value within a string is an integer
 func IsStringInt(v interface{}) (FuncResponse, error) {
-	return IsTransformableToInt(StringToInt{})(v)
+	return IsTransformableTo(transform.StringToInt, types.Int)(v)
+}
+
+// IsStringFloat32 checks if the value within a string is a float
+func IsStringFloat32(v interface{}) (FuncResponse, error) {
+	return IsTransformableTo(transform.StringToFloat32, types.Float32)(v)
+}
+
+// IsStringFloat64 checks if the value within a string is a float
+func IsStringFloat64(v interface{}) (FuncResponse, error) {
+	return IsTransformableTo(transform.StringToFloat64, types.Float64)(v)
+}
+
+// IsStringBool checks if the value within a string is a float
+func IsStringBool(v interface{}) (FuncResponse, error) {
+	return IsTransformableTo(transform.StringToBool, types.Bool)(v)
+}
+
+// IsStringUint checks if the value within a string is a float
+func IsStringUint(v interface{}) (FuncResponse, error) {
+	return IsTransformableTo(transform.StringToUint, types.Uint)(v)
 }

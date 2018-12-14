@@ -9,6 +9,7 @@ var _int8 int8
 var _int16 int16
 var _int32 int32
 var _int64 int64
+var _bool bool
 
 var _uint uint
 var _uint8 uint8
@@ -32,6 +33,7 @@ var (
 	Int16 = reflect.TypeOf(_int16)
 	Int32 = reflect.TypeOf(_int32)
 	Int64 = reflect.TypeOf(_int64)
+	Bool  = reflect.TypeOf(_bool)
 
 	Uint    = reflect.TypeOf(_uint)
 	Uint8   = reflect.TypeOf(_uint8)

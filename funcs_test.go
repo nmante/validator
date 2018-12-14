@@ -1,6 +1,10 @@
 package validator
 
 import (
+	"github.com/nmante/validator/compare"
+	"github.com/nmante/validator/transform"
+	"github.com/nmante/validator/types"
+
 	"math/cmplx"
 	"testing"
 )
@@ -26,7 +30,7 @@ func TestTypeFuncs(t *testing.T) {
 }
 
 func TestIsTransformableToInt(t *testing.T) {
-	r, err := IsTransformableToInt(StringToInt{})("53")
+	r, err := IsTransformableTo(transform.StringToInt, types.Int)("53")
 	if err != nil {
 		t.Error(err)
 	}
@@ -87,7 +91,7 @@ func TestIsLength(t *testing.T) {
 }
 
 func TestIsEqual(t *testing.T) {
-	r, err := IsEqual(StringToInt{}, IntComparer{}, 100)("53")
+	r, err := IsEqual(transform.StringToInt, compare.Int, 100)("53")
 	if err != nil {
 		t.Error(err)
 	}
@@ -96,7 +100,7 @@ func TestIsEqual(t *testing.T) {
 		t.Error(r.Error)
 	}
 
-	r, err = IsEqual(StringToInt{}, IntComparer{}, 100)("100")
+	r, err = IsEqual(transform.StringToInt, compare.Int, 100)("100")
 	if err != nil {
 		t.Error(err)
 	}
@@ -107,7 +111,7 @@ func TestIsEqual(t *testing.T) {
 }
 
 func TestIsBetween(t *testing.T) {
-	r, err := IsBetween(StringToInt{}, IntComparer{}, 1, 100)("53")
+	r, err := IsBetween(transform.StringToInt, compare.Int, 1, 100)("53")
 
 	if err != nil {
 		t.Error(err)
@@ -117,7 +121,7 @@ func TestIsBetween(t *testing.T) {
 		t.Error(r.Error)
 	}
 
-	r, err = IsBetween(StringToInt{}, IntComparer{}, 1, 100)("101")
+	r, err = IsBetween(transform.StringToInt, compare.Int, 1, 100)("101")
 
 	if err != nil {
 		t.Error(err)
