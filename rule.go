@@ -1,8 +1,12 @@
 package validator
 
+import (
+	"github.com/nmante/validator/funcs"
+)
+
 // Rule is a custom object that contains a key and validator functions
 type Rule struct {
-	Funcs          []Func
+	Funcs          []funcs.Func
 	Key            string
 	IsRequired     bool
 	EnableParallel bool

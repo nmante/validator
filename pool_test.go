@@ -24,3 +24,16 @@ func TestSetNumWorkers(t *testing.T) {
 		t.Errorf("Num workers should be %d", MinWorkers)
 	}
 }
+
+func TestNewWorkerPool(t *testing.T) {
+	numWorkers := 20
+	p, err := NewWorkerPool(numWorkers, nil)
+
+	if err != nil {
+		t.Errorf("There should be no error. %s", err.Error())
+	}
+
+	if p.numWorkers != numWorkers {
+		t.Errorf("There should %d workers in the pool.", numWorkers)
+	}
+}

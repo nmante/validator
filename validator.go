@@ -1,5 +1,9 @@
 package validator
 
+import (
+	"github.com/nmante/validator/funcs"
+)
+
 // Validator is an object that contains a set of rules that can be validated in parallel, or synchronously
 type Validator struct {
 	enableParallel bool
@@ -44,7 +48,7 @@ func New(rules []Rule, options ...Option) (*Validator, error) {
 }
 
 // AddRule adds a rule to the validator
-func (v *Validator) AddRule(key string, funcs ...Func) *Validator {
+func (v *Validator) AddRule(key string, funcs ...funcs.Func) *Validator {
 	if rule, ok := v.rules[key]; ok {
 		rule.Funcs = append(rule.Funcs, funcs...)
 		v.rules[key] = rule

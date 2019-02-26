@@ -3,6 +3,8 @@ package validator
 import (
 	"errors"
 	"sync"
+
+	"github.com/nmante/validator/funcs"
 )
 
 var (
@@ -16,12 +18,12 @@ type Job interface {
 
 type FuncJob struct {
 	value         interface{}
-	validatorFunc Func
+	validatorFunc funcs.Func
 	Err           error
-	Result        FuncResponse
+	Result        funcs.Response
 }
 
-func NewFuncJob(value interface{}, validatorFunc Func, options ...func(*FuncJob) error) (*FuncJob, error) {
+func NewFuncJob(value interface{}, validatorFunc funcs.Func, options ...func(*FuncJob) error) (*FuncJob, error) {
 	if value == nil {
 		return &FuncJob{}, errors.New("Must pass a valid value")
 	}

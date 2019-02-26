@@ -1,17 +1,12 @@
 package validator
 
 import (
-	"errors"
 	"sync"
 )
 
 const (
 	MinWorkers = 2
 	MaxWorkers = 20000
-)
-
-var (
-	ErrInvalidJobSlice = errors.New("Must pass in slice of Job interfaces.")
 )
 
 type Pool interface {
@@ -26,14 +21,13 @@ type workerPool struct {
 	numWorkers int
 }
 
-func NewWorkerPool(numWorkers int, jobs interface{}, options ...func(*workerPool) error) (*workerPool, error) {
-	js, ok := jobs.([]Job)
-	if !ok {
-		return nil, ErrInvalidJobSlice
+func NewWorkerPool(numWorkers int, jobs []Job, options ...func(*workerPool) error) (*workerPool, error) {
+	if jobs == nil {
+		jobs = []Job{}
 	}
 
 	pool := &workerPool{
-		jobs:     js,
+		jobs:     jobs,
 		jobsChan: make(chan Job),
 	}
 

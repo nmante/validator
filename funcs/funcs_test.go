@@ -1,4 +1,4 @@
-package validator
+package funcs
 
 import (
 	"github.com/nmante/validator/compare"
@@ -6,6 +6,7 @@ import (
 	"github.com/nmante/validator/types"
 
 	"math/cmplx"
+	"strconv"
 	"testing"
 )
 
@@ -41,7 +42,7 @@ func TestIsTransformableToInt(t *testing.T) {
 }
 
 func TestIsEmail(t *testing.T) {
-	r, err := IsEmail("nii.mante@buzzfeed.com")
+	r, err := String.IsEmail("nii.mante@buzzfeed.com")
 	if err != nil {
 		t.Error(err)
 	}
@@ -50,7 +51,7 @@ func TestIsEmail(t *testing.T) {
 		t.Error(r.Error)
 	}
 
-	r, err = IsEmail("hello")
+	r, err = String.IsEmail("hello")
 	if err != nil {
 		t.Error(err)
 	}
@@ -59,7 +60,7 @@ func TestIsEmail(t *testing.T) {
 		t.Error("'hello' is not an email. This should not be valid")
 	}
 
-	r, err = IsEmail(3)
+	r, err = String.IsEmail(3)
 	if err == nil {
 		t.Error("There should be an error")
 	}
@@ -129,5 +130,36 @@ func TestIsBetween(t *testing.T) {
 
 	if !r.IsValid {
 		t.Error(r.Error)
+	}
+}
+
+func BenchmarkIsBetween(b *testing.B) {
+	for k := 0; k < b.N; k++ {
+		_, _ = IsBetween(transform.StringToInt, compare.Int, 1, 100)("101")
+	}
+}
+
+func BenchmarkIsStringBetweenInts(b *testing.B) {
+	for k := 0; k < b.N; k++ {
+		_, _ = IsStringBetweenInts{value: "101", lower: 1, upper: 100}.Validate()
+	}
+}
+
+func BenchmarkNormalIsBetween(b *testing.B) {
+	isBetween := func(value string, lower, upper int) (bool, error) {
+		parsed, err := strconv.ParseInt(value, 10, 0)
+		if err != nil {
+			return false, err
+		}
+
+		if lower <= int(parsed) && int(parsed) <= upper {
+			return true, nil
+		}
+
+		return false, nil
+	}
+
+	for k := 0; k < b.N; k++ {
+		_, _ = isBetween("101", 1, 100)
 	}
 }
